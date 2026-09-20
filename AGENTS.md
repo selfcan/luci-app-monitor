@@ -105,9 +105,9 @@
 
 ## Release Contract
 
-- The initial public release is `v0.1`. The current public release is `v0.4`;
-  the pending `v0.5` uses package version `0.5-r1` for both `luci-app-monitor`
-  and `luci-i18n-monitor-zh-cn`.
+- The initial public release is `v0.1`. The current public release is `v0.5`;
+  both `luci-app-monitor` and `luci-i18n-monitor-zh-cn` use package version
+  `0.5-r1`.
 - Publish under Apache License 2.0 at
   `https://github.com/haitun001/luci-app-monitor`.
 - Keep `README.md` in Chinese and `README_EN.md` in English. Both documents
@@ -175,6 +175,20 @@
   package metadata, gettext, all 20 LuCI-extracted translations and installer
   success/failure cleanup checks pass. Installer checks run under WSL/POSIX.
   Six-target branch/tag CI and final Release verification are pending.
+- 2026-09-20: Branch CI `35498272298` passed validation and all six SDK targets
+  for `ac09acd` before the annotated `v0.5` tag was created. Tag CI
+  `35498993042` passed all six targets and published the normal public Release.
+  Its notes exactly match the bilingual changelog, and its assets are exactly
+  twelve `0.5-r1` packages plus `SHA256SUMS`. Downloading all thirteen assets
+  verifies every checksum. IPK/APK metadata, architecture, dependency and
+  minimal file-manifest checks pass; every target contains identical view and
+  Chinese LMO content. The packaged view passes the logic and paused-frame
+  regression suite. The exact README installer passes real Release downloads,
+  SHA-256 validation and private-directory cleanup under WSL, with only the
+  package-installation call stubbed. Firefox and router runtime checks were
+  intentionally omitted under the agreed v0.5 exception. The final 710-character
+  ImmortalWrt 25.12.1 installer was copied to the Windows clipboard and read
+  back byte-for-byte equal to both README commands.
 
 - 2026-09-06: v0.4 scope is confirmed: show IPv4 only, label all connected
   logical members in merged rows, review all English/Chinese strings, publish
