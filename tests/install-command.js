@@ -17,7 +17,7 @@ const stubs = `
 mktemp() { command mktemp -d "$MONITOR_TEST_DIR/work.XXXXXX"; }
 wget() {
   test "$1" = -T && test "$2" = 60 && test "$3" = -O || return 1
-  case "$5" in https://github.com/haitun001/luci-app-monitor/releases/download/v0.4/"$4") ;; *) return 1 ;; esac
+  case "$5" in https://github.com/haitun001/luci-app-monitor/releases/download/v0.5/"$4") ;; *) return 1 ;; esac
   if test "$4" = SHA256SUMS; then
     case "$MONITOR_TEST_CASE" in
       missing) sha256sum immortalwrt-25.12.1-luci-app-monitor-*.apk > "$4" ;;
@@ -25,7 +25,7 @@ wget() {
       *) sha256sum immortalwrt-25.12.1-*.apk > "$4" ;;
     esac
     if test "$MONITOR_TEST_CASE" = checksum; then
-      printf corrupt >> immortalwrt-25.12.1-luci-app-monitor-0.4-r1.apk
+      printf corrupt >> immortalwrt-25.12.1-luci-app-monitor-0.5-r1.apk
     fi
   else
     printf package > "$4"
@@ -56,8 +56,8 @@ for (const scenario of [ 'success', 'download', 'checksum', 'missing', 'duplicat
 			assert.deepEqual(args.slice(0, 6), [ 'add', '--allow-untrusted', '--force-reinstall',
 				'--no-network', '--repositories-file', '/dev/null' ]);
 			assert.equal(args.length, 8);
-			assert.equal(path.basename(args[6]), 'immortalwrt-25.12.1-luci-app-monitor-0.4-r1.apk');
-			assert.equal(path.basename(args[7]), 'immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.4-r1.apk');
+			assert.equal(path.basename(args[6]), 'immortalwrt-25.12.1-luci-app-monitor-0.5-r1.apk');
+			assert.equal(path.basename(args[7]), 'immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.5-r1.apk');
 		}
 	}
 	finally {

@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.5
+
+- 修复后台动画帧暂停可能导致监控请求阻塞、进而造成登录会话过期的问题；所有监控采样 RPC 使用 LuCI 原生直接发送选项。
+- Fix monitor requests stalling when background animation frames pause, which
+  could allow the login session to expire. All monitor sampling RPCs now use
+  LuCI's native option to send without animation-frame batching.
+- 保留单次刷新共享、完整连接表读取和原生登录会话机制；浏览器完全挂起、休眠或断网后仍可能需要重新登录。
+- Preserve shared in-flight refreshes, complete connection-table reads, and
+  native login handling. Browser suspension, sleep, or loss of connectivity
+  can still require a new login.
+- Firefox 问题基于官方资料、LuCI 源码与本地调度模拟调查，未确认用户实际触发条件。本版仅进行本地检查和六目标 SDK CI，未进行 Firefox、路由器实测或八分钟持续运行检查。
+- The Firefox investigation uses documentation, LuCI source, and a local
+  scheduling simulation; the reported trigger remains unconfirmed. Validation
+  for this release covers local checks and all six SDK CI targets, without
+  Firefox testing, router testing, or an eight-minute soak.
+- 更新 ImmortalWrt 25.12.1 单行安装命令至 v0.5，校验两个安装包的 SHA-256 并自动清理独立临时目录。
+- Update the ImmortalWrt 25.12.1 installer to v0.5, verifying both package
+  checksums and cleaning its private temporary directory.
+
 ## v0.4
 
 - 已连接线路的状态下方显示 IPv4 地址；合并线路按逻辑接口标注全部已连接成员的地址，断线后清除旧地址。

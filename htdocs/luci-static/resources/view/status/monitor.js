@@ -7,21 +7,43 @@
 'require uci';
 'require validation';
 
+// LuCI batches RPCs on animation frames, which may pause in background tabs.
 var callSystemInfo = rpc.declare({
 	object: 'system',
-	method: 'info'
+	method: 'info',
+	nobatch: true
 });
 
 var callInterfaceDump = rpc.declare({
 	object: 'network.interface',
 	method: 'dump',
-	expect: { interface: [] }
+	expect: { interface: [] },
+	nobatch: true
 });
 
 var callNetworkDevices = rpc.declare({
 	object: 'luci-rpc',
 	method: 'getNetworkDevices',
-	expect: { '': {} }
+	expect: { '': {} },
+	nobatch: true
+});
+
+var callCPUStat = rpc.declare({
+	object: 'file',
+	method: 'read',
+	params: [ 'path' ],
+	expect: { data: '' },
+	reject: true,
+	nobatch: true
+});
+
+var callSensors = rpc.declare({
+	object: 'file',
+	method: 'exec',
+	params: [ 'command', 'params' ],
+	expect: { '': {} },
+	reject: true,
+	nobatch: true
 });
 
 function loadSnapshot(withSensors, withConnections) {
@@ -29,8 +51,8 @@ function loadSnapshot(withSensors, withConnections) {
 		L.resolveDefault(callSystemInfo(), {}),
 		L.resolveDefault(callInterfaceDump(), []),
 		L.resolveDefault(callNetworkDevices(), {}),
-		L.resolveDefault(fs.read('/proc/stat'), null),
-		withSensors ? L.resolveDefault(fs.exec('/usr/sbin/sensors', [ '-j', '-A' ]), null) : null,
+		L.resolveDefault(callCPUStat('/proc/stat'), null),
+		withSensors ? L.resolveDefault(callSensors('/usr/sbin/sensors', [ '-j', '-A' ]), null) : null,
 		withConnections ? L.resolveDefault(fs.read_direct('/proc/net/nf_conntrack'), null) : null
 	]);
 }

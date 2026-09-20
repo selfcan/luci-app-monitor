@@ -17,8 +17,11 @@
   one through 60 seconds.
 - On an interval change, replace the registered interval and request one
   immediate refresh. Reuse any in-flight refresh so requests never overlap.
-- Keep the native LuCI session lifecycle. The reported foreground expiry was
-  not reproduced; the user deferred additional keepalive changes for v0.3.
+- Keep the native LuCI session lifecycle. All monitor sampling RPCs use
+  `nobatch: true` so paused animation frames cannot stall the refresh queue.
+  Do not add separate keepalive timers, change session timeouts, or auto-login.
+  Browser suspension, sleep, and lost connectivity can still expire sessions.
+  The reported Firefox trigger is unconfirmed; no Firefox runtime test is claimed.
 - Place Connections immediately after Status. Read the complete conntrack
   table with native fs.read_direct('/proc/net/nf_conntrack') and exact read
   permission plus cgi-io download access. Ordinary file.read truncates this
@@ -102,9 +105,9 @@
 
 ## Release Contract
 
-- The initial public release is `v0.1`. The current public release is `v0.4`; both
-  `luci-app-monitor` and `luci-i18n-monitor-zh-cn` use package version
-  `0.4-r1`.
+- The initial public release is `v0.1`. The current public release is `v0.4`;
+  the pending `v0.5` uses package version `0.5-r1` for both `luci-app-monitor`
+  and `luci-i18n-monitor-zh-cn`.
 - Publish under Apache License 2.0 at
   `https://github.com/haitun001/luci-app-monitor`.
 - Keep `README.md` in Chinese and `README_EN.md` in English. Both documents
@@ -126,6 +129,11 @@
 
 ## Required Verification Before Delivery
 
+- For v0.5 only, the user explicitly waived router installation, real-browser
+  checks, and the eight-minute soak. Use documentation research, local tests,
+  all six branch/tag SDK CI targets, and Release artifact verification instead.
+  Do not install Firefox or describe simulations or v0.4 results as v0.5 runtime
+  verification. The routine requirements below still apply to other releases.
 - Validate JavaScript syntax, JSON, translations, LuCI i18n extraction, and
   package metadata.
 - Build the application and Simplified Chinese packages in all six GitHub
@@ -145,6 +153,28 @@
 - Remove router-side APKs and test artifacts; leave only installed packages.
 
 ## Progress
+
+- 2026-09-20: v0.5 scope is confirmed: investigate the Firefox login-session
+  report without installing Firefox, fix the documented animation-frame RPC
+  queue stall, publish bilingual release notes, and copy the ImmortalWrt
+  25.12.1-only installer to the Windows clipboard after Release verification.
+  MDN documents background animation-frame suspension. OpenWrt/ImmortalWrt
+  LuCI 24.10, 25.12 and master support `nobatch`; the 25.12 request code at
+  `2fc28c43d2d66acec3d18084737df8781bb0415b` reproduces a queued RPC with
+  animation frames withheld while a `nobatch` RPC sends. The queued XHR has
+  not yet started its timeout. Rpcd session lookup refreshes the idle timeout.
+  This establishes a failure mechanism, not the user's unknown trigger.
+  The user explicitly chose local checks and CI only for this release.
+- 2026-09-20: The v0.5 sampling change, `0.5-r1` metadata, bilingual notes and
+  versioned installer are implemented. Local checks pass paused-frame refreshes,
+  shared slow reads, interval changes, error recovery and sensor retries; the
+  same regression check fails against v0.4 as expected. An additional in-memory
+  check using pinned upstream LuCI request/rpc/fs code reproduces v0.4 stalling
+  and v0.5 completing consecutive samples without animation frames, preserving
+  file-error fallback and sensors exit-code-1 JSON. JavaScript/JSON/YAML,
+  package metadata, gettext, all 20 LuCI-extracted translations and installer
+  success/failure cleanup checks pass. Installer checks run under WSL/POSIX.
+  Six-target branch/tag CI and final Release verification are pending.
 
 - 2026-09-06: v0.4 scope is confirmed: show IPv4 only, label all connected
   logical members in merged rows, review all English/Chinese strings, publish

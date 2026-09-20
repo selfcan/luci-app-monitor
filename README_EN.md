@@ -10,6 +10,8 @@ ImmortalWrt. After installation, open it at Status -> Router Monitor.
 - Refreshes CPU, memory, and network data asynchronously every three seconds by
   default. A page-level selector applies any interval from 1 to 60 seconds
   immediately and resets to three seconds when the page is reopened.
+- Sends monitor samples without waiting for animation frames that can pause in
+  background tabs, preventing the refresh requests from stalling on that queue.
 - Calculates aggregate multi-core CPU usage from /proc/stat.
 - Reports physical memory usage as (total - free) / total, excluding swap.
 - Shows sensor names and temperatures in degrees Celsius when lm-sensors
@@ -85,14 +87,14 @@ family and series.
 ### ImmortalWrt 25.12.1 install or upgrade command
 
 Run this single command as root on an ImmortalWrt 25.12.1 router with LuCI
-already installed. It downloads the v0.4 application and Simplified Chinese
+already installed. It downloads the v0.5 application and Simplified Chinese
 packages from GitHub into a private /tmp directory, verifies both SHA-256
 checksums, then allows untrusted package signatures and replaces an existing
 version. It cleans its downloads on success, failure, or a catchable interrupt
 without matching unrelated APKs elsewhere in /tmp.
 
 ~~~sh
-(set -eu; dir=$(mktemp -d /tmp/luci-monitor-v0.4.XXXXXX); trap 'rm -f "$dir"/*.apk "$dir/SHA256SUMS" "$dir/CHECKSUMS"; rmdir "$dir"' EXIT; trap 'exit 1' HUP INT TERM; cd "$dir"; base=https://github.com/haitun001/luci-app-monitor/releases/download/v0.4; app=immortalwrt-25.12.1-luci-app-monitor-0.4-r1.apk; zh=immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.4-r1.apk; for file in "$app" "$zh" SHA256SUMS; do wget -T 60 -O "$file" "$base/$file"; done; awk -v a="$app" -v z="$zh" '$2==a || $2==z {count[$2]++; print} END {exit(count[a]!=1 || count[z]!=1)}' SHA256SUMS > CHECKSUMS; sha256sum -c CHECKSUMS; apk add --allow-untrusted --force-reinstall --no-network --repositories-file /dev/null "$dir/$app" "$dir/$zh")
+(set -eu; dir=$(mktemp -d /tmp/luci-monitor-v0.5.XXXXXX); trap 'rm -f "$dir"/*.apk "$dir/SHA256SUMS" "$dir/CHECKSUMS"; rmdir "$dir"' EXIT; trap 'exit 1' HUP INT TERM; cd "$dir"; base=https://github.com/haitun001/luci-app-monitor/releases/download/v0.5; app=immortalwrt-25.12.1-luci-app-monitor-0.5-r1.apk; zh=immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.5-r1.apk; for file in "$app" "$zh" SHA256SUMS; do wget -T 60 -O "$file" "$base/$file"; done; awk -v a="$app" -v z="$zh" '$2==a || $2==z {count[$2]++; print} END {exit(count[a]!=1 || count[z]!=1)}' SHA256SUMS > CHECKSUMS; sha256sum -c CHECKSUMS; apk add --allow-untrusted --force-reinstall --no-network --repositories-file /dev/null "$dir/$app" "$dir/$zh")
 ~~~
 
 The command requires HTTPS access to GitHub. It bypasses package-signature
@@ -111,21 +113,29 @@ Refresh or log in to LuCI again and open Status -> Router Monitor.
 ## Compatibility and verification
 
 - Supports LuCI-equipped OpenWrt and ImmortalWrt 24.10 and later.
-- The v0.4 CI matrix builds OpenWrt 24.10.8, 25.12.5, and Snapshot, plus
+- The v0.5 CI matrix builds OpenWrt 24.10.8, 25.12.5, and Snapshot, plus
   ImmortalWrt 24.10.6, 25.12.1, and master.
 - The IPK main package is all and APK is noarch. CPU architecture is generally
   not a restriction, but firmware family, release series, and package manager
   must match.
-- The v0.4 runtime validation target is the supplied x86_64 ImmortalWrt 25.12.1
-  router: English/Chinese desktop and mobile rendering, read-only permissions,
-  IPv4 address ownership, connection counts, traffic directions, refresh cadence, focus preservation,
-  and an eight-minute three-second soak. Other targets receive SDK build
-  verification, without a claim of hardware testing for this release.
+- By agreement, v0.5 validation covers research, local checks, and all six SDK
+  CI targets: paused animation frames, shared requests, failure recovery,
+  accounting logic, translations, and the installer. Firefox is not installed
+  or tested; router installation, desktop/mobile page checks, and the
+  eight-minute soak are omitted. The v0.4 runtime results are historical only.
 - Connection records are retained only for the current refresh. Total RX/TX
   remain boot-session counters and do not restart after a disconnect. This
   release does not change LuCI authentication or session expiry.
 - The sensors command is an optional probe. Missing lm-sensors or temperature
   inputs do not affect the other metrics.
+
+The Firefox investigation uses [MDN's background scheduling documentation](https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API)
+and the [LuCI request queue source](https://github.com/openwrt/luci/blob/2fc28c43d2d66acec3d18084737df8781bb0415b/modules/luci-base/htdocs/luci-static/resources/luci.js#L738).
+A local simulation confirms that paused animation frames leave default batched
+requests queued, while native `nobatch` requests can send. This does not establish
+the reported trigger. Browser suspension, computer sleep, or lost connectivity
+can still expire the session and require a new login; the plugin does not extend
+the session timeout or log in automatically.
 
 ## Maintainer release process
 
@@ -141,7 +151,9 @@ and cleanup on failure. The real-page suite
 is `tests/router-e2e.js`; provide the router URL, credentials, Chrome path, and
 an output directory outside the repository through environment variables. The
 default soak is eight minutes. Install matching firmware-series branch
-artifacts for router verification before creating the release tag.
+artifacts for router verification before creating the release tag. The agreed
+v0.5 exception omits router checks, using local validation, all six branch CI
+targets, and Release artifact verification as the release requirements.
 
 ## License
 

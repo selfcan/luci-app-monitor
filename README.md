@@ -9,6 +9,7 @@ luci-app-monitor 是一个只读的 OpenWrt/ImmortalWrt LuCI 实时监控插件�
 
 - 默认每 3 秒异步刷新 CPU、内存和网络数据；页面顶部可立即调整为 1–60 秒。
   刷新间隔不持久化，重新打开页面后恢复为 3 秒。
+- 监控采样直接发送，不等待后台标签可能暂停的动画帧，避免刷新请求因此阻塞。
 - CPU 使用率由 /proc/stat 的聚合计数器计算，支持多核心 CPU。
 - 内存使用率仅计算物理内存的 (total - free) / total，不包含 Swap。
 - 安装并检测到 lm-sensors 时显示传感器名称和摄氏温度；没有有效传感器时不显示。
@@ -73,12 +74,12 @@ luci-i18n-monitor-zh-cn 简体中文包。
 ### ImmortalWrt 25.12.1 一键安装或覆盖升级
 
 在已安装 LuCI 的 ImmortalWrt 25.12.1 路由器上以 root 执行以下一条命令。
-它从 GitHub 下载 v0.4 主包和简体中文包到独立的 /tmp 临时目录，核对两个包的
+它从 GitHub 下载 v0.5 主包和简体中文包到独立的 /tmp 临时目录，核对两个包的
 SHA-256 后允许未受信任签名并覆盖安装已有版本。成功、失败或收到可捕获的
 中断信号时都会清理本次下载的文件，不匹配 /tmp 中的其他 APK。
 
 ~~~sh
-(set -eu; dir=$(mktemp -d /tmp/luci-monitor-v0.4.XXXXXX); trap 'rm -f "$dir"/*.apk "$dir/SHA256SUMS" "$dir/CHECKSUMS"; rmdir "$dir"' EXIT; trap 'exit 1' HUP INT TERM; cd "$dir"; base=https://github.com/haitun001/luci-app-monitor/releases/download/v0.4; app=immortalwrt-25.12.1-luci-app-monitor-0.4-r1.apk; zh=immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.4-r1.apk; for file in "$app" "$zh" SHA256SUMS; do wget -T 60 -O "$file" "$base/$file"; done; awk -v a="$app" -v z="$zh" '$2==a || $2==z {count[$2]++; print} END {exit(count[a]!=1 || count[z]!=1)}' SHA256SUMS > CHECKSUMS; sha256sum -c CHECKSUMS; apk add --allow-untrusted --force-reinstall --no-network --repositories-file /dev/null "$dir/$app" "$dir/$zh")
+(set -eu; dir=$(mktemp -d /tmp/luci-monitor-v0.5.XXXXXX); trap 'rm -f "$dir"/*.apk "$dir/SHA256SUMS" "$dir/CHECKSUMS"; rmdir "$dir"' EXIT; trap 'exit 1' HUP INT TERM; cd "$dir"; base=https://github.com/haitun001/luci-app-monitor/releases/download/v0.5; app=immortalwrt-25.12.1-luci-app-monitor-0.5-r1.apk; zh=immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.5-r1.apk; for file in "$app" "$zh" SHA256SUMS; do wget -T 60 -O "$file" "$base/$file"; done; awk -v a="$app" -v z="$zh" '$2==a || $2==z {count[$2]++; print} END {exit(count[a]!=1 || count[z]!=1)}' SHA256SUMS > CHECKSUMS; sha256sum -c CHECKSUMS; apk add --allow-untrusted --force-reinstall --no-network --repositories-file /dev/null "$dir/$app" "$dir/$zh")
 ~~~
 
 命令需要能通过 HTTPS 访问 GitHub。只绕过包签名信任检查，仍校验 HTTPS 和
@@ -94,16 +95,22 @@ SHA-256；不修改软件源，不升级其他软件，也不使用 --force-depe
 ## 支持范围与验证
 
 - 支持带 LuCI 的 OpenWrt 和 ImmortalWrt 24.10 及更新系列。
-- v0.4 的 CI 构建 OpenWrt 24.10.8、25.12.5、Snapshot，以及
+- v0.5 的 CI 构建 OpenWrt 24.10.8、25.12.5、Snapshot，以及
   ImmortalWrt 24.10.6、25.12.1、master。
 - 主包为 all、APK 对应 noarch；网络架构通常不限制安装，但固件家族、发行系列
   和包管理器必须匹配。
-- v0.4 以指定的 x86_64 ImmortalWrt 25.12.1 路由器为实机验证目标，覆盖中英文
-  桌面和移动页面、IPv4 地址归属、只读权限、连接数、流量方向、刷新周期、焦点保持及 8 分钟
-  3 秒间隔持续运行。其他目标按 SDK 构建验证，不宣称经过本版实机验证。
+- v0.5 按本轮约定仅进行资料调查、本地检查和六目标 SDK CI，覆盖动画帧暂停、
+  请求共享、失败恢复、统计逻辑、翻译及安装命令。未安装或实测 Firefox，未进行
+  路由器安装、桌面/移动页面检查或 8 分钟持续运行；v0.4 的实机结果仅为历史证据。
 - 连接数仅保留本次刷新所需的数据。累计接收和发送仍是设备自本次开机以来的
   计数，不在断线后重新累计；本版未修改 LuCI 登录会话机制。
 - sensors 命令是可选探测；没有安装 lm-sensors 或没有温度传感器不会影响其余功能。
+
+Firefox 调查依据为 [MDN 后台页面调度说明](https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API)
+和 [LuCI 请求队列源码](https://github.com/openwrt/luci/blob/2fc28c43d2d66acec3d18084737df8781bb0415b/modules/luci-base/htdocs/luci-static/resources/luci.js#L738)。
+本地模拟确认：动画帧暂停时，默认批量请求会留在队列中，而原生 `nobatch` 请求
+可以正常发送。此机制尚不能确认用户遇到的具体原因。浏览器完全挂起、电脑休眠
+或断网仍可能造成正常会话过期，需要重新登录；插件不延长会话超时或自动登录。
 
 ## 发布维护
 
@@ -116,7 +123,8 @@ SHA256SUMS，并使用对应日志创建 GitHub Release。
 `node tests/install-command.js` 检查安装命令的校验与失败清理。真实页面检查使用
 `tests/router-e2e.js`，通过环境变量提供路由器地址、登录信息、Chrome 路径和
 仓库外的输出目录；默认浸泡 8 分钟。实机安装必须选择与固件系列匹配的分支
-构建产物，并在验证通过后才创建发布标签。
+构建产物，并在验证通过后才创建发布标签。v0.5 按上述约定免除本轮实机检查，
+以本地检查、六目标分支 CI 和 Release 产物核验为发布门槛。
 
 ## 许可证
 
