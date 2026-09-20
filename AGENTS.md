@@ -101,6 +101,10 @@
   Use the existing GitHub Actions SDK matrix as the authoritative build path.
 - Use `apply_patch` for manual source edits. Keep code minimal and avoid
   speculative abstractions or unused compatibility paths.
+- Keep the single-line deployment command at most 500 UTF-8 bytes. OpenWrt
+  and ImmortalWrt default to a 512-byte BusyBox editing buffer, reserving two
+  bytes for EOL/NUL and silently discarding pasted input after 510 characters.
+  Validate interactive pasting as well as non-interactive shell execution.
 - Update this file when a verified behavior, constraint, or test result changes.
 
 ## Release Contract
@@ -153,6 +157,16 @@
 - Remove router-side APKs and test artifacts; leave only installed packages.
 
 ## Progress
+
+- 2026-09-20: The user reported that pasting the v0.5 installer produced no
+  response or error. Its 710-character line exceeds the default BusyBox input
+  limit; previous `sh -c` checks bypassed that editor. A local BusyBox 1.37.0
+  pseudo-terminal with `FEATURE_EDITING_MAX_LEN=512` reproduces silent truncation
+  at 510 characters and a continuation prompt. The revised 496-character command
+  completes through the same editor, with real GitHub downloads, two SHA-256
+  checks and private-directory cleanup; only `apk` installation is stubbed.
+  Existing download/checksum/installation failure tests pass, and now enforce
+  a 500-byte ceiling. Both READMEs explain Ctrl+C followed by paste and Enter.
 
 - 2026-09-20: v0.5 scope is confirmed: investigate the Firefox login-session
   report without installing Firefox, fix the documented animation-frame RPC

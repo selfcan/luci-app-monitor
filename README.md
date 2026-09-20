@@ -78,8 +78,11 @@ luci-i18n-monitor-zh-cn 简体中文包。
 SHA-256 后允许未受信任签名并覆盖安装已有版本。成功、失败或收到可捕获的
 中断信号时都会清理本次下载的文件，不匹配 /tmp 中的其他 APK。
 
+命令为 496 个 ASCII 字符，适合 BusyBox 默认命令行长度限制。如果之前粘贴后
+没有反应，先按 Ctrl+C 清除残余输入，再粘贴下面完整的一行并按回车。
+
 ~~~sh
-(set -eu; dir=$(mktemp -d /tmp/luci-monitor-v0.5.XXXXXX); trap 'rm -f "$dir"/*.apk "$dir/SHA256SUMS" "$dir/CHECKSUMS"; rmdir "$dir"' EXIT; trap 'exit 1' HUP INT TERM; cd "$dir"; base=https://github.com/haitun001/luci-app-monitor/releases/download/v0.5; app=immortalwrt-25.12.1-luci-app-monitor-0.5-r1.apk; zh=immortalwrt-25.12.1-luci-i18n-monitor-zh-cn-0.5-r1.apk; for file in "$app" "$zh" SHA256SUMS; do wget -T 60 -O "$file" "$base/$file"; done; awk -v a="$app" -v z="$zh" '$2==a || $2==z {count[$2]++; print} END {exit(count[a]!=1 || count[z]!=1)}' SHA256SUMS > CHECKSUMS; sha256sum -c CHECKSUMS; apk add --allow-untrusted --force-reinstall --no-network --repositories-file /dev/null "$dir/$app" "$dir/$zh")
+(set -eu; d=$(mktemp -d /tmp/lm.XXXXXX); trap 'rm -f "$d"/*; rmdir "$d"' 0; trap 'exit 1' 1 2 15; cd "$d"; u=https://github.com/haitun001/luci-app-monitor/releases/download/v0.5; wget -T60 -O s "$u/SHA256SUMS"; for p in app-monitor i18n-monitor-zh-cn; do f=immortalwrt-25.12.1-luci-$p-0.5-r1.apk; wget -T60 -O "$f" "$u/$f"; awk -v f="$f" '$2==f{n++;print}END{exit(n!=1)}' s > c; sha256sum -c c; done; apk add --allow-untrusted --force-reinstall --no-network --repositories-file /dev/null ./*.apk)
 ~~~
 
 命令需要能通过 HTTPS 访问 GitHub。只绕过包签名信任检查，仍校验 HTTPS 和
